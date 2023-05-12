@@ -1,0 +1,80 @@
+body {
+    background-color: black;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+.sphere {
+    fill: blue;
+}
+
+.country {
+    stroke: black;
+    stroke-width: 0.3px;
+}
+
+.country:hover {
+    fill: red;
+}
+
+.white {
+    fill: #fff;
+    color: white;
+}
+
+#mapContainer {
+    display: block;
+    margin: auto;
+}
+
+#mapSvg {
+    border-color: grey;
+    border-width: medium;
+    border-style: dashed;
+}
+
+svg {
+    display: block;
+    margin: auto;
+    width: 90%;
+    justify-content: center;
+}
+
+.axis {
+    font: 10px sans-serif;
+}
+
+.axis path,
+.axis line{
+    fill: none;
+    stroke: white;
+    stroke-width: 2px;
+}
+
+.line{
+    fill: none;
+    stroke: white;
+    stroke-width: 1px;
+    shape-rendering: crispEdges
+}
+
+.tick text{
+    font-size: 12px;
+}
+
+.tick line{
+    opacity: 0.5;
+}
+
+.center {
+    margin: auto;
+    width: 50%;
+    padding: 15px;
+    text-align: center;
+}
+
+.margin {
+    margin: 15px;
+}
