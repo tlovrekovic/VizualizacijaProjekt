@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +8,12 @@
     <script src="https://d3js.org/d3-geo.v1.min.js"></script>
     <script src="http://d3js.org/topojson.v1.min.js"></script>
     <script src="https://d3js.org/d3-ease.v1.min.js"></script>
+
+
     <link rel="stylesheet" href="style.css">
     <title>Document</title>
 </head>
+
 <body>
     <h1 class="white center padding">BigMacPrices</h1>
     <div id="mapContainer">
@@ -20,58 +24,61 @@
     </select>
 
     <script>
+
         const width = innerWidth;
         const height = innerHeight;
         let linechart;
-
+        var colorHelper = [];
         const colors = ["#2e61b8", "#2eb8a6", "#eaed87", "#8ab82e", "#b8b32e", "#b8712e", "#b8452e"];
-        const colorValue = d => d.properties.economy;
+        const colorValue = d => d.properties.dollar_price;
 
         const svg = d3.select("#mapContainer").append("svg")
             .attr("id", "mapSvg")
             .attr("width", width)
             .attr("height", height * 0.95);
 
-     
+
         const projection = d3.geoNaturalEarth1()
             .scale(230)
             .translate([width / 2.25, height / 2.15]);
         const pathGenerator = d3.geo.path().projection(projection);
-       
+
         const mapGroup = svg.append('g');
 
         mapGroup.append('path')
             .attr('class', 'sphere')
-            .attr('d', pathGenerator({type: "Sphere"}));
+            .attr('d', pathGenerator({ type: "Sphere" }));
 
-        
+
         const zoomLevelLimit = [1, 5];
         const zoom = d3.behavior.zoom().scaleExtent(zoomLevelLimit)
 
         svg.call(zoom.on('zoom', () => {
             mapGroup.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
         }));
-
         //loading data for map
-        d3.json("topoJSONdata.json", function(error, topoJSONdata) {
+        d3.json("topoJSONdata.json", function (error, topoJSONdata) {
             //loading other data for each country
-            d3.csv("bigmac.csv", function(error, csvData) {
+            d3.json("bigmacJSON.json", function (error, jsonData) {
                 const countries = topojson.feature(topoJSONdata, topoJSONdata.objects.countries);
-
                 //row from file
                 const rowById = {};
-                csvData.forEach(d => {
-                    rowById[d.iso_n3] = d;
+                var countryNames = [];
+                var countriesHelper = [];
+                jsonData.forEach(d => {
+                    rowById[d.currency_Code] = d;
+                    countryNames.push(rowById.undefined.name);
+                    countriesHelper.push(rowById.undefined);
+
                 });
+
+                countryNames = [...new Set(countryNames.map((r) => r))];
+
 
                 countries.features.forEach(d => {
                     Object.assign(d.properties, rowById[d.id])
                 });
 
-                const countryNames = [];
-                countries.features.forEach(item => {
-                    countryNames.push(item.properties.name);
-                });
 
                 //putting countries in select element
                 countryNames.sort();
@@ -86,27 +93,21 @@
                 dropDown.on('change', function () {
                     const select = document.getElementById('countries');
                     const name = select.options[select.selectedIndex].value;
-                    let country;
-                    countries.features.forEach(item => {
-                       if (item.properties.name === name) {
-                           country = item;
-                       }
-                    });
+                    console.log('nameT', name);
+                    var country = [];
+                    console.log('tcountiries', countriesHelper);
+                    country = countriesHelper.filter((r) => r.name == name)
+                    console.log('TestCntry', country);
+                    var graphData = [];
+                    country.forEach((item) => {
+                        graphData.push({
+                            x: item.date,
+                            y: item.dollar_price
+                        })
+                    })
+                    console.log('graphDataTest', graphData);
+                    makeGraphs(graphData);
 
-                    if (typeof country !== 'undefined') {
-                        const data = {
-                            country: name,
-                            eleven: country.properties.eleven,
-                            twelwe: country.properties.twelwe,
-                            thirteen: country.properties.thirteen,
-                            fourteen: country.properties.fourteen,
-                            fifteen: country.properties.fifteen,
-                            sixteen: country.properties.sixteen,
-                            seventeen: country.properties.seventeen,
-                            eighteen: country.properties.eighteen,
-                        }
-                        makeGraphs(data);
-                    }
                 })
 
                 mapGroup.selectAll('path')
@@ -119,42 +120,133 @@
                     .on('click', d => {
                         //disable click when dragging over map
                         if (d3.event.defaultPrevented) return;
-                        const data = {
-                            country: rowById[d.id].name,
-                            eleven: rowById[d.id].eleven,
-                            twelwe: rowById[d.id].twelwe,
-                            thirteen: rowById[d.id].thirteen,
-                            fourteen: rowById[d.id].fourteen,
-                            fifteen: rowById[d.id].fifteen,
-                            sixteen: rowById[d.id].sixteen,
-                            seventeen: rowById[d.id].seventeen,
-                            eighteen: rowById[d.id].eighteen,
-                        }
-                        makeGraphs(data);
+                        var country = [];
+                        console.log('tcountiries', countriesHelper);
+                        country = countriesHelper.filter((r) => r.name == name)
+                        var graphData = [];
+                        country.forEach((item) => {
+                            graphData.push({
+                                x: item.date,
+                                y: item.dollar_price
+                            })
+                        })
+                        makeGraphs(graphData);
                     })
                     .append('title')
                     .text(d => {
                         const name = rowById[d.id].name;
-                        const continent = rowById[d.id].continent;
-                        const region = rowById[d.id].region_wb;
-                        const population = rowById[d.id].pop_est;
-                        const popuplationModified = numberWithSpaces(parseInt(population));
-
-                        return name + "\nContinent: " + continent + "\nRegion: " + region + "\nPopulation: " + popuplationModified;
+                        return name;
                     })
-            });    
+            });
         });
-
-        //for displaying big numbers
-        function numberWithSpaces(x) {
-            return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        function getDate(d) {
+            return new Date(d.jsonDate);
         }
-        
         const graphSvg = d3.select("body").append("svg")
             .attr("width", width)
             .attr("height", height * 0.75);
         let graphGroup = graphSvg.append('g');
         let graphMade = false;
+
+        function makeGraphs(data) {
+            if (graphMade) {
+                graphGroup.remove();
+                linechart.remove();
+                graphSvg.selectAll(".bar").remove();
+                graphSvg.selectAll(".removeable").remove();
+                graphGroup = graphSvg.append('g');
+            }
+            window.scrollTo(0, document.body.scrollHeight);
+            const margin = { top: 20, bottom: 70, left: 40, right: 20 };
+            const width = 750 - margin.left - margin.right;
+            const height = 500 - margin.top - margin.bottom;
+
+            // get max and min dates - this assumes data is sorted
+            var minDate = getDate(data[0]);
+            var maxDate = getDate(data[data.length - 1]);
+
+            var x = d3.time.scale().domain([minDate, maxDate]).range([0, width])
+
+            var y = d3.scale
+                .linear()
+                .domain([
+                    0,
+                    d3.max(data.map((d) => d.y), function (d) {
+                        return d;
+                    }),
+                ])
+                .range([height, 0]);
+            var outFormat = d3.time.format("%d-%m-%y");
+            var xAxis = d3.graphSvg.axis().scale(x).orient("bottom").ticks(20);
+            var yAxis = d3.graphSvg.axis().scale(y).orient("left").ticks(30);
+
+            graphSvg
+                .append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(xAxis)
+                .selectAll("text")
+                .style("text-anchor", "middle");
+
+            graphSvg
+                .append("text")
+                .attr("x", width / 2)
+                .attr("y", -(margin.top / 2))
+                .attr("font-weight", "bold")
+                .style("font-size", "20px")
+                .style("text-anchor", "middle")
+                .text(
+                    "Cijene BigMac sendviča."
+                );
+
+            graphSvg
+                .append("g")
+                .attr("class", "y axis")
+                .call(yAxis)
+                .append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -(height / 2))
+                .attr("y", -(margin.left / 2 + 20))
+                .style("text-anchor", "middle")
+                .text("Cijena u dolarima")
+                .style("font-size", "13px");
+
+            graphSvg
+                .append("text")
+                .attr("x", width / 2)
+                .attr("y", height + margin.bottom / 2)
+                .attr("dy", "1em")
+                .style("text-anchor", "middle")
+                .text("Datum");
+
+            var valueline = d3.graphSvg
+                .line()
+                .interpolate("cardinal")
+                .x(function (d) {
+                    return x(getDate(d.x));
+                })
+                .y(function (d) {
+                    return y(d.y);
+                });
+            const graphData = data.filter((d) => {
+                if (isNaN(d.x)) return false
+                if (isNaN(d.y)) return false
+                return true
+            })
+            var linechart = graphSvg
+                .append("path")
+                .attr("class", "line")
+                .attr("d", valueline(graphData))
+                .style("stroke", "blue")
+                .attr("fill", "none");
+            graphMade = true;
+        }
+
+
+        //for displaying big numbers
+        function numberWithSpaces(x) {
+            return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        }
         function parseData(data) {
             if (!data.toString().includes(",")) {
                 return 0;
@@ -166,4 +258,5 @@
     </script>
 
 </body>
+
 </html>

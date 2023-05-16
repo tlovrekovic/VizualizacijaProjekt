@@ -16,7 +16,7 @@ html {
 }
 
 .country:hover {
-    fill: red;
+    fill: green;
 }
 
 .white {
@@ -30,9 +30,9 @@ html {
 }
 
 #mapSvg {
-    border-color: grey;
+    border-color: white;
     border-width: medium;
-    border-style: dashed;
+    border-style: double;
 }
 
 svg {
