@@ -29,8 +29,7 @@
         const height = innerHeight;
         let linechart;
         var colorHelper = [];
-        const colors = ["#2e61b8", "#2eb8a6", "#eaed87", "#8ab82e", "#b8b32e", "#b8712e", "#b8452e"];
-        const colorValue = d => d.properties.dollar_price;
+
 
         const svg = d3.select("#mapContainer").append("svg")
             .attr("id", "mapSvg")
@@ -60,6 +59,7 @@
         d3.json("topoJSONdata.json", function (error, topoJSONdata) {
             //loading other data for each country
             d3.json("bigmacJSON.json", function (error, jsonData) {
+                // Extracting the data from the JSON file
                 const countries = topojson.feature(topoJSONdata, topoJSONdata.objects.countries);
                 //row from file
                 const rowById = {};
@@ -73,11 +73,46 @@
                 });
 
                 countryNames = [...new Set(countryNames.map((r) => r))];
+                console.log('helperh', countriesHelper);
+                //RADI DOLJE
+                // Create a map to store the sum and count of dollar_price for each unique name
+                const nameData = new Map();
+
+                // Iterate over the JSON objects and calculate sum and count for each unique name
+                jsonData.forEach(item => {
+                    const name = item.name;
+                    const price = parseFloat(item.dollar_price);
+
+                    if (nameData.has(name)) {
+                        nameData.get(name).sum += price;
+                        nameData.get(name).count += 1;
+                    } else {
+                        nameData.set(name, { sum: price, count: 1 });
+                    }
+                });
+
+                // Calculate the average for each unique name
+                const averages = new Map();
+                nameData.forEach((values, name) => {
+                    averages.set(name, values.sum / values.count);
+                });
+
+                // Print the average dollar_price for each unique name
+                averages.forEach((average, name) => {
+                    console.log(`${name}: ${average}`);
+                });
+
+                //RADI GORE
+                //ISKORISTI ONAJ KOD ZA BOJE NA KARTI
+
 
 
                 countries.features.forEach(d => {
                     Object.assign(d.properties, rowById[d.id])
                 });
+                
+
+                
 
 
                 //putting countries in select element
@@ -110,13 +145,15 @@
 
                 })
 
+                //klik na džavu, kurca ne radi 
+
                 mapGroup.selectAll('path')
                     .data(countries.features)
                     .enter()
                     .append('path')
                     .attr('class', 'country')
                     .attr('d', pathGenerator)
-                    .attr('fill', d => colors[String(colorValue(d)).substring(0, 1) - 1])
+                    //.attr('fill', d => colors[String(colorValue(d)).substring(0, 1) - 1])
                     .on('click', d => {
                         //disable click when dragging over map
                         if (d3.event.defaultPrevented) return;
@@ -142,10 +179,7 @@
         function getDate(d) {
             return new Date(d.jsonDate);
         }
-        const graphSvg = d3.select("body").append("svg")
-            .attr("width", width)
-            .attr("height", height * 0.75);
-        let graphGroup = graphSvg.append('g');
+
         let graphMade = false;
 
         function makeGraphs(data) {
@@ -160,6 +194,11 @@
             const margin = { top: 20, bottom: 70, left: 40, right: 20 };
             const width = 750 - margin.left - margin.right;
             const height = 500 - margin.top - margin.bottom;
+
+
+            const graphSvg = d3.select("body").append("svg")
+                .attr("width", width)
+                .attr("height", height * 0.75);
 
             // get max and min dates - this assumes data is sorted
             var minDate = getDate(data[0]);
