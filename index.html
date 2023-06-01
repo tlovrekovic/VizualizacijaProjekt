@@ -15,7 +15,7 @@
 </head>
 
 <body>
-    <h1 class="white center padding">BigMacPrices</h1>
+    <h1 class="black center padding">BigMacPrices</h1>
     <div id="mapContainer">
     </div>
 
@@ -75,45 +75,57 @@
                 countryNames = [...new Set(countryNames.map((r) => r))];
                 console.log('helperh', countriesHelper);
                 //RADI DOLJE
-                // Create a map to store the sum and count of dollar_price for each unique name
-                const nameData = new Map();
+                // Create a map to store the statistics for each unique name
+                const nameStatistics = new Map();
 
-                // Iterate over the JSON objects and calculate sum and count for each unique name
+                // Iterate over the JSON objects and calculate statistics for each unique name
                 jsonData.forEach(item => {
                     const name = item.name;
                     const price = parseFloat(item.dollar_price);
 
-                    if (nameData.has(name)) {
-                        nameData.get(name).sum += price;
-                        nameData.get(name).count += 1;
+                    if (nameStatistics.has(name)) {
+                        const statistics = nameStatistics.get(name);
+                        statistics.sum += price;
+                        statistics.count += 1;
+                        statistics.max = Math.max(statistics.max, price);
+                        statistics.min = Math.min(statistics.min, price);
                     } else {
-                        nameData.set(name, { sum: price, count: 1 });
+                        nameStatistics.set(name, {
+                            sum: price,
+                            count: 1,
+                            max: price,
+                            min: price
+                        });
                     }
                 });
 
-                // Calculate the average for each unique name
-                const averages = new Map();
-                nameData.forEach((values, name) => {
-                    averages.set(name, values.sum / values.count);
+                // Calculate the average, maximum, and minimum for each unique name
+                const statisticsResult = new Map();
+                nameStatistics.forEach((statistics, name) => {
+                    const average = statistics.sum / statistics.count;
+                    const maximum = statistics.max;
+                    const minimum = statistics.min;
+                    statisticsResult.set(name, {
+                        average: average,
+                        maximum: maximum,
+                        minimum: minimum
+                    });
                 });
 
-                // Print the average dollar_price for each unique name
-                averages.forEach((average, name) => {
-                    console.log(`${name}: ${average}`);
+                // Print the statistics for each unique name
+                statisticsResult.forEach((statistics, name) => {
+                    console.log(`Name: ${name}`);
+                    console.log(`Average: ${statistics.average}`);
+                    console.log(`Maximum: ${statistics.maximum}`);
+                    console.log(`Minimum: ${statistics.minimum}`);
+                    console.log('--------------------------');
                 });
 
                 //RADI GORE
                 //ISKORISTI ONAJ KOD ZA BOJE NA KARTI
-
-
-
                 countries.features.forEach(d => {
                     Object.assign(d.properties, rowById[d.id])
                 });
-                
-
-                
-
 
                 //putting countries in select element
                 countryNames.sort();
@@ -128,9 +140,7 @@
                 dropDown.on('change', function () {
                     const select = document.getElementById('countries');
                     const name = select.options[select.selectedIndex].value;
-                    console.log('nameT', name);
                     var country = [];
-                    console.log('tcountiries', countriesHelper);
                     country = countriesHelper.filter((r) => r.name == name)
                     console.log('TestCntry', country);
                     var graphData = [];
@@ -145,7 +155,19 @@
 
                 })
 
-                //klik na džavu, kurca ne radi 
+                //odavdje na dolje ne radi
+                // Calculate the average dollar_price for each country
+                var averagePrices = d3.map();
+                nameStatistics.forEach(function (statistics, name) {
+                    var average = statistics.sum / statistics.count;
+                    averagePrices.set(name, average);
+                });
+                console.log('avg', averagePrices);
+
+                // Define the color scale based on average prices
+                var colorScale = d3.scale.quantize()
+                    .domain([d3.min(averagePrices.values()), d3.max(averagePrices.values())])
+                    .range(["yellow", "orange", "red"]);
 
                 mapGroup.selectAll('path')
                     .data(countries.features)
@@ -153,33 +175,47 @@
                     .append('path')
                     .attr('class', 'country')
                     .attr('d', pathGenerator)
-                    //.attr('fill', d => colors[String(colorValue(d)).substring(0, 1) - 1])
+                    .attr('fill', function (d) {
+                        return colorScale(averagePrices.get(d.properties.name));
+                    })
                     .on('click', d => {
                         //disable click when dragging over map
                         if (d3.event.defaultPrevented) return;
                         var country = [];
-                        console.log('tcountiries', countriesHelper);
-                        country = countriesHelper.filter((r) => r.name == name)
-                        var graphData = [];
+                        var countryName = d.properties.name;
+                        console.log('propname', d.properties.name);
+                        country = countriesHelper.filter((r) => r.name == countryName)
+                        var graphDataMap = [];
                         country.forEach((item) => {
-                            graphData.push({
+                            graphDataMap.push({
+                                name:item.name,
                                 x: item.date,
                                 y: item.dollar_price
                             })
                         })
-                        makeGraphs(graphData);
+                        console.log('clickGraphData', graphDataMap);
+                        makeGraphs(graphDataMap);
                     })
                     .append('title')
-                    .text(d => {
-                        const name = rowById[d.id].name;
-                        return name;
+                    .text(function (d) {
+                        const countryName = d.properties.name;
+                        const statistics = statisticsResult.get(countryName);
+
+                        if (statistics && statistics.average) {
+                            const average = statistics.average.toFixed(2);
+                            return countryName + "\nAverage Price: $" + average;
+                        } else {
+                            return countryName + "\nAverage Price: N/A";
+                        }
                     })
             });
         });
-        function getDate(d) {
-            return new Date(d.jsonDate);
-        }
 
+
+        const graphSvg = d3.select("body").append("svg")
+            .attr("width", width)
+            .attr("height", height * 0.75);
+        let graphGroup = graphSvg.append('g');
         let graphMade = false;
 
         function makeGraphs(data) {
@@ -190,109 +226,237 @@
                 graphSvg.selectAll(".removeable").remove();
                 graphGroup = graphSvg.append('g');
             }
+            var parsedData = data.map((item) => {
+                var year = item.x.split('-')[0]; // Extract the year
+                return {
+                    x: item.x,
+                    y: item.y
+                };
+            });
+            console.log('data', data);
+
             window.scrollTo(0, document.body.scrollHeight);
+
             const margin = { top: 20, bottom: 70, left: 40, right: 20 };
             const width = 750 - margin.left - margin.right;
             const height = 500 - margin.top - margin.bottom;
 
+            
+            const title = `BigMac Prices - ${data[0].name}`;
+            const xAxisLinechartTitle = "Time [years]";
+            const yAxisLinechartTitle = "Value [dollars]";
 
-            const graphSvg = d3.select("body").append("svg")
-                .attr("width", width)
-                .attr("height", height * 0.75);
 
-            // get max and min dates - this assumes data is sorted
-            var minDate = getDate(data[0]);
-            var maxDate = getDate(data[data.length - 1]);
+            
 
-            var x = d3.time.scale().domain([minDate, maxDate]).range([0, width])
+            const xDataLinechart = parsedData.reduce((accumulator, d) => {
+                accumulator.push(d.x);
+                return accumulator;
+            }, []);
 
-            var y = d3.scale
-                .linear()
-                .domain([
-                    0,
-                    d3.max(data.map((d) => d.y), function (d) {
-                        return d;
-                    }),
-                ])
+            const yDataLinechart = parsedData.reduce((accumulator, d) => {
+                accumulator.push(d.y);
+                return accumulator;
+            }, []);
+
+            const max = Math.max(...yDataLinechart);
+            const min = Math.min(...yDataLinechart);
+            const sum = parseInt(yDataLinechart.reduce((a, b) => a + b), 0);
+            const avg = parseInt(Math.ceil(sum / yDataLinechart.length));
+            const minYValue = 0;
+            const maxYValue = 10;
+            console.log("avg", avg);
+
+            const chartScale = d3.scale.linear()
+                .domain([minYValue, maxYValue])
+                .range([max, 1]);
+
+            const x = d3.scale.ordinal()
+                .domain(d3.range(xDataLinechart.length))
+                .rangePoints([0, width]);
+
+            const y = d3.scale.linear()
+                .domain([0, d3.max(yDataLinechart)])
                 .range([height, 0]);
-            var outFormat = d3.time.format("%d-%m-%y");
-            var xAxis = d3.graphSvg.axis().scale(x).orient("bottom").ticks(20);
-            var yAxis = d3.graphSvg.axis().scale(y).orient("left").ticks(30);
 
-            graphSvg
-                .append("g")
-                .attr("class", "x axis")
-                .attr("transform", "translate(0," + height + ")")
-                .call(xAxis)
-                .selectAll("text")
-                .style("text-anchor", "middle");
+            const xAxisLinechart = d3.svg.axis()
+                .scale(x)
+                .orient("bottom")
+                .innerTickSize(-height)
+                .outerTickSize(5)
+                .tickPadding(10)
+                .tickFormat(function (d, i) { return xDataLinechart[i]; });
 
-            graphSvg
-                .append("text")
-                .attr("x", width / 2)
-                .attr("y", -(margin.top / 2))
+            const yAxisLinechart = d3.svg.axis()
+                .scale(y)
+                .orient("left")
+                .innerTickSize(-width)
+                .outerTickSize(5)
+                .tickPadding(10);
+
+            graphGroup.append("g")
+                .attr("class", "black x axis")
+                .attr("transform", "translate(" + 0.2 * width + "," + height * 1.143 + ")")
+                .call(xAxisLinechart)
+                .selectAll(".tick text") // Select all tick labels
+                .style("text-anchor", "end") // Adjust the text alignment
+                .attr("transform", "rotate(-45)") // Rotate the tick labels
+                .attr("dx", "-0.5em") // Adjust the horizontal position
+                .attr("dy", "0.25em"); // Adjust the vertical position
+
+            graphGroup.append("text")
+                .attr("x", 500)
+                .attr("y", 550)
+                .attr("dy", ".100em")
                 .attr("font-weight", "bold")
-                .style("font-size", "20px")
+                .attr("font-size", "15px")
                 .style("text-anchor", "middle")
-                .text(
-                    "Cijene BigMac sendviča."
-                );
-
-            graphSvg
-                .append("g")
-                .attr("class", "y axis")
-                .call(yAxis)
+                .text(xAxisLinechartTitle);
+            graphGroup.append("g")
+                .attr("class", "black y axis")
+                .attr("transform", "translate(" + 0.2 * width + "," + height / 7 + ")")
+                .call(yAxisLinechart)
                 .append("text")
                 .attr("transform", "rotate(-90)")
-                .attr("x", -(height / 2))
-                .attr("y", -(margin.left / 2 + 20))
+                .attr("x", - (0.75 * width / 2) + 50)
+                .attr("y", -70)
+                .attr("dy", ".50em")
+                .attr("font-weight", "bold")
+                .attr("font-size", "15px")
                 .style("text-anchor", "middle")
-                .text("Cijena u dolarima")
-                .style("font-size", "13px");
+                .text(yAxisLinechartTitle);
 
-            graphSvg
-                .append("text")
+            const valueline = d3.svg.line()
+                .interpolate("monotone")
+                .x(function (d, i) { return x(i); })
+                .y(function (d) { return y(d); });
+
+            let linechartValue = "";
+
+
+
+            linechart = graphGroup.append("path")
+                .attr("transform", "translate(" + 0.2 * width + "," + height / 7 + ")")
+                .attr("d", valueline(yDataLinechart))
+                .attr("fill", "none")
+                .style("stroke", "red")
+                .style("stroke-width", "5px");
+
+
+            const pathLength = linechart.node().getTotalLength();
+            linechart
+                .attr("stroke-dashoffset", pathLength)
+                .attr("stroke-dasharray", pathLength)
+                .transition()
+                .delay(100)
+                .duration(2000)
+                .attr("stroke-dashoffset", 0);
+
+            graphGroup.append("text")
                 .attr("x", width / 2)
-                .attr("y", height + margin.bottom / 2)
-                .attr("dy", "1em")
+                .attr("y", -25)
+                .attr("transform", "translate(" + 0.5 * width + "," + height / 7 + ")")
+                .attr("text-anchor", "middle")
+                .attr("font-weight", "bold")
+                .style("fill", "black")
+                .style("font-size", "1.5em")
+                .text(title);
+
+            const yDataBarchart = [max, min, avg];
+            const xDataBarchart = ["Max", "Min", "Avg"];
+
+            const widthBarchart = 300 - margin.left - margin.right;
+            const heightBarchart = 500 - margin.top - margin.bottom;
+            const barPadding = 4;
+            const barWidth = (width / yDataBarchart.length - barPadding) / 5;
+
+            const xBarchart = d3.scale.ordinal()
+                .domain(d3.range(yDataBarchart.length))
+                .rangeRoundBands([0, widthBarchart]);
+
+            const yBarchart = d3.scale.linear()
+                .domain([0, d3.max(yDataBarchart)])
+                .range([heightBarchart, 0]);
+
+            const xAxisBarchart = d3.svg.axis()
+                .scale(xBarchart)
+                .orient("bottom")
+                .tickFormat((d, i) => xDataBarchart[i]);
+
+            const yAxisBarchart = d3.svg.axis()
+                .scale(yBarchart)
+                .orient("left")
+                .ticks(10);
+
+            graphSvg.append("g")
+                .attr("class", "black removeable y axis")
+                .attr("transform", "translate(1000," + height / 7 + ")")
+                .call(yAxisBarchart)
+                .append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("x", - (0.75 * width / 2) + 50)
+                .attr("y", -70)
+                .attr("dy", ".50em")
+                .attr("font-weight", "bold")
+                .attr("font-size", "15px")
                 .style("text-anchor", "middle")
-                .text("Datum");
+                .style("fill", "black")
+                .text(yAxisLinechartTitle);
 
-            var valueline = d3.graphSvg
-                .line()
-                .interpolate("cardinal")
-                .x(function (d) {
-                    return x(getDate(d.x));
+            graphSvg.append("g")
+                .attr("class", "black removeable x axis")
+                .attr("transform", "translate(1000," + height * 1.143 + ")")
+                .call(xAxisBarchart)
+                .selectAll("text")
+                .style("fill", "black")
+                .style("text-anchor", "middle");
+
+            const barchartColors = ["#33FFA1", "#66CFA1", "#99FFA1"];
+            const tooltip = d3.select("body")
+                .append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0);
+
+            const barchart = graphSvg.selectAll("rect")
+                .data(yDataBarchart)
+                .enter()
+                .append("rect")
+                .attr("class", "bar removeable")
+                .attr("transform", "translate(1020," + height / 7 + ")")
+                .attr("x", function (d, i) { return xBarchart(i); })
+                .attr("width", barWidth)
+                .attr("height", function () { return heightBarchart - yBarchart(0); })
+                .attr("y", function () { return yBarchart(0); })
+                .attr("fill", function (d, i) { return barchartColors[i]; })
+                .on("mouseover", function (d, i) {
+                    const barData = yDataBarchart[i];
+                    const minValue = min;
+                    const maxValue = max;
+                    const averageValue = avg;
+
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", 0.9);
+                    tooltip.html("Min: " + minValue + "<br>" +
+                        "Max: " + maxValue + "<br>" +
+                        "Average: " + averageValue)
+                        .style("left", (d3.event.pageX) + "px")
+                        .style("top", (d3.event.pageY - 28) + "px");
                 })
-                .y(function (d) {
-                    return y(d.y);
+                .on("mouseout", function (d, i) {
+                    tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
                 });
-            const graphData = data.filter((d) => {
-                if (isNaN(d.x)) return false
-                if (isNaN(d.y)) return false
-                return true
-            })
-            var linechart = graphSvg
-                .append("path")
-                .attr("class", "line")
-                .attr("d", valueline(graphData))
-                .style("stroke", "blue")
-                .attr("fill", "none");
+
+            graphSvg.selectAll(".bar")
+                .transition()
+                .delay(100)
+                .duration(2000)
+                .attr("y", function (d) { return yBarchart(d); })
+                .attr("height", function (d) { return heightBarchart - yBarchart(d); });
+
             graphMade = true;
-        }
-
-
-        //for displaying big numbers
-        function numberWithSpaces(x) {
-            return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-        }
-        function parseData(data) {
-            if (!data.toString().includes(",")) {
-                return 0;
-            }
-            const commmaIndex = data.toString().indexOf(",");
-            const value = data.toString().substring(0, commmaIndex);
-            return parseInt(parseInt(value) / 1000000000);
         }
     </script>
 

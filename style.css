@@ -1,14 +1,25 @@
 body {
-    background-color: black;
+    background-color: rgb(201, 201, 201);
 }
 
 html {
     scroll-behavior: smooth;
 }
 
+
 .sphere {
     fill: blue;
 }
+.tooltip {
+    position: absolute;
+    text-align: center;
+    padding: 6px 12px;
+    font-size: 14px;
+    background-color: #000;
+    color: #fff;
+    border-radius: 4px;
+    pointer-events: none;
+  }
 
 .country {
     stroke: black;
@@ -16,7 +27,7 @@ html {
 }
 
 .country:hover {
-    fill: green;
+    fill: white;
 }
 
 .white {
@@ -30,7 +41,7 @@ html {
 }
 
 #mapSvg {
-    border-color: white;
+    border-color: black;
     border-width: medium;
     border-style: double;
 }
@@ -49,13 +60,13 @@ svg {
 .axis path,
 .axis line{
     fill: none;
-    stroke: white;
+    stroke: black;
     stroke-width: 2px;
 }
 
 .line{
     fill: none;
-    stroke: white;
+    stroke: black;
     stroke-width: 1px;
     shape-rendering: crispEdges
 }
