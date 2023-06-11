@@ -24,35 +24,36 @@
     </select>
 
     <script>
-
+        // Dobivanje širine i visine trenutnog prozora ili kontejnera
         const width = innerWidth;
         const height = innerHeight;
+        // Varijabla za deklaraciju linijskog grafikona
         let linechart;
-        var colorHelper = [];
-
-
+        // Stvaranje SVG elementa i dodavanje u element s ID-om "mapContainer"
         const svg = d3.select("#mapContainer").append("svg")
             .attr("id", "mapSvg")
             .attr("width", width)
             .attr("height", height * 0.95);
-
-
+         // Stvaranje projekcije koristeći geoNaturalEarth()
         const projection = d3.geoNaturalEarth1()
             .scale(230)
             .translate([width / 2.25, height / 2.15]);
+        //The path generator function is responsible for generating SVG path strings based on geographic data, 
+        //which can then be used to draw shapes on the SVG canvas.
         const pathGenerator = d3.geo.path().projection(projection);
-
+        // Dodavanje <g> (grupe) elementa za držanje elemenata karte
         const mapGroup = svg.append('g');
-
+        // Dodavanje <path> elementa s klasom "sphere" za crtanje sfere
         mapGroup.append('path')
             .attr('class', 'sphere')
             .attr('d', pathGenerator({ type: "Sphere" }));
-
-
+        // Postavljanje minimalne i maksimalne razine zumiranja dozvoljene za kartu
         const zoomLevelLimit = [1, 5];
+        // Stvaranje ponašanja zumiranja s određenim granicama razine
         const zoom = d3.behavior.zoom().scaleExtent(zoomLevelLimit)
-
+        // Povezivanje ponašanja zumiranja s SVG elementom i definiranje povratne funkcije za događaje zumiranja
         svg.call(zoom.on('zoom', () => {
+              // Ažuriranje transformacije karte temeljene na događaju zumiranja
             mapGroup.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
         }));
         //loading data for map
@@ -74,7 +75,6 @@
 
                 countryNames = [...new Set(countryNames.map((r) => r))];
                 console.log('helperh', countriesHelper);
-                //RADI DOLJE
                 // Create a map to store the statistics for each unique name
                 const nameStatistics = new Map();
 
@@ -121,8 +121,7 @@
                     console.log('--------------------------');
                 });
 
-                //RADI GORE
-                //ISKORISTI ONAJ KOD ZA BOJE NA KARTI
+                
                 countries.features.forEach(d => {
                     Object.assign(d.properties, rowById[d.id])
                 });
@@ -146,6 +145,7 @@
                     var graphData = [];
                     country.forEach((item) => {
                         graphData.push({
+                            name:item.name,
                             x: item.date,
                             y: item.dollar_price
                         })
@@ -242,7 +242,7 @@
             const height = 500 - margin.top - margin.bottom;
 
             
-            const title = `BigMac Prices - ${data[0].name}`;
+            const title = `BigMac Prices - ${data[1].name}`;
             const xAxisLinechartTitle = "Time [years]";
             const yAxisLinechartTitle = "Value [dollars]";
 
@@ -300,6 +300,7 @@
                 .call(xAxisLinechart)
                 .selectAll(".tick text") // Select all tick labels
                 .style("text-anchor", "end") // Adjust the text alignment
+                .style("font-size", "12px")
                 .attr("transform", "rotate(-45)") // Rotate the tick labels
                 .attr("dx", "-0.5em") // Adjust the horizontal position
                 .attr("dy", "0.25em"); // Adjust the vertical position
@@ -309,7 +310,7 @@
                 .attr("y", 550)
                 .attr("dy", ".100em")
                 .attr("font-weight", "bold")
-                .attr("font-size", "15px")
+                .attr("font-size", "25px")
                 .style("text-anchor", "middle")
                 .text(xAxisLinechartTitle);
             graphGroup.append("g")
@@ -322,7 +323,7 @@
                 .attr("y", -70)
                 .attr("dy", ".50em")
                 .attr("font-weight", "bold")
-                .attr("font-size", "15px")
+                .attr("font-size", "25px")
                 .style("text-anchor", "middle")
                 .text(yAxisLinechartTitle);
 
@@ -332,9 +333,6 @@
                 .y(function (d) { return y(d); });
 
             let linechartValue = "";
-
-
-
             linechart = graphGroup.append("path")
                 .attr("transform", "translate(" + 0.2 * width + "," + height / 7 + ")")
                 .attr("d", valueline(yDataLinechart))
@@ -359,7 +357,7 @@
                 .attr("text-anchor", "middle")
                 .attr("font-weight", "bold")
                 .style("fill", "black")
-                .style("font-size", "1.5em")
+                .style("font-size", "3em")
                 .text(title);
 
             const yDataBarchart = [max, min, avg];
@@ -398,7 +396,7 @@
                 .attr("y", -70)
                 .attr("dy", ".50em")
                 .attr("font-weight", "bold")
-                .attr("font-size", "15px")
+                .style("font-size", "25px")
                 .style("text-anchor", "middle")
                 .style("fill", "black")
                 .text(yAxisLinechartTitle);
@@ -409,6 +407,7 @@
                 .call(xAxisBarchart)
                 .selectAll("text")
                 .style("fill", "black")
+                .style("font-size","25px")
                 .style("text-anchor", "middle");
 
             const barchartColors = ["#33FFA1", "#66CFA1", "#99FFA1"];
